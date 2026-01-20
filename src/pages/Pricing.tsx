@@ -1,36 +1,18 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Check, X, Shield, Zap, Users, Building2, Loader2, ArrowRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface PricingTier {
   name: string;
   description: string;
   monthlyPrice: number;
   yearlyPrice: number;
-  priceKey: {
-    monthly: string;
-    yearly: string;
-  };
-  features: {
-    text: string;
-    included: boolean;
-    highlight?: boolean;
-  }[];
-  limits: {
-    deadlines: string;
-    users: string;
-    sms: string;
-  };
+  priceKey: { monthly: string; yearly: string };
+  features: string[];
+  limits: { deadlines: string; users: string; sms: string };
   popular?: boolean;
-  icon: React.ReactNode;
+  color: string;
 }
 
 const pricingTiers: PricingTier[] = [
@@ -40,46 +22,20 @@ const pricingTiers: PricingTier[] = [
     monthlyPrice: 0,
     yearlyPrice: 0,
     priceKey: { monthly: '', yearly: '' },
-    icon: <Shield className="h-5 w-5" />,
-    limits: {
-      deadlines: '5 deadlines',
-      users: '1 user',
-      sms: 'Email only',
-    },
-    features: [
-      { text: '5 active deadlines', included: true },
-      { text: 'Email reminders', included: true },
-      { text: 'Basic categories', included: true },
-      { text: 'Mobile responsive', included: true },
-      { text: 'Recurring deadlines', included: false },
-      { text: 'SMS notifications', included: false },
-      { text: 'Team collaboration', included: false },
-      { text: 'A/E/C templates', included: false },
-    ],
+    color: 'blue',
+    limits: { deadlines: '5 deadlines', users: '1 user', sms: 'Email only' },
+    features: ['5 active deadlines', 'Email reminders', 'Basic categories', 'Mobile responsive'],
   },
   {
     name: 'Pro',
-    description: 'For professionals who can\'t afford to miss deadlines',
+    description: "For professionals who can't afford to miss deadlines",
     monthlyPrice: 19,
     yearlyPrice: 190,
     priceKey: { monthly: 'pro_monthly', yearly: 'pro_yearly' },
-    icon: <Zap className="h-5 w-5" />,
+    color: 'red',
     popular: true,
-    limits: {
-      deadlines: 'Unlimited',
-      users: '1 user',
-      sms: '50 SMS/mo',
-    },
-    features: [
-      { text: 'Unlimited deadlines', included: true, highlight: true },
-      { text: 'Email + SMS reminders', included: true, highlight: true },
-      { text: 'Recurring deadlines', included: true, highlight: true },
-      { text: 'A/E/C industry templates', included: true, highlight: true },
-      { text: 'Cost tracking', included: true },
-      { text: 'Document notes', included: true },
-      { text: 'Priority support', included: true },
-      { text: 'Team collaboration', included: false },
-    ],
+    limits: { deadlines: 'Unlimited', users: '1 user', sms: '50 SMS/mo' },
+    features: ['Unlimited deadlines', 'Email + SMS reminders', 'Recurring deadlines', 'A/E/C industry templates', 'Cost tracking', 'Document notes', 'Priority support'],
   },
   {
     name: 'Team',
@@ -87,84 +43,71 @@ const pricingTiers: PricingTier[] = [
     monthlyPrice: 49,
     yearlyPrice: 490,
     priceKey: { monthly: 'team_monthly', yearly: 'team_yearly' },
-    icon: <Users className="h-5 w-5" />,
-    limits: {
-      deadlines: 'Unlimited',
-      users: 'Up to 10',
-      sms: '200 SMS/mo',
-    },
-    features: [
-      { text: 'Everything in Pro', included: true },
-      { text: 'Up to 10 team members', included: true, highlight: true },
-      { text: 'Shared deadlines', included: true, highlight: true },
-      { text: 'Role-based permissions', included: true, highlight: true },
-      { text: 'Team dashboard', included: true },
-      { text: 'Activity audit log', included: true },
-      { text: 'Deadline assignments', included: true },
-      { text: 'Priority support', included: true },
-    ],
+    color: 'green',
+    limits: { deadlines: 'Unlimited', users: 'Up to 10', sms: '200 SMS/mo' },
+    features: ['Everything in Pro', 'Up to 10 team members', 'Shared deadlines', 'Role-based permissions', 'Team dashboard', 'Activity audit log', 'Deadline assignments'],
   },
   {
     name: 'Enterprise',
     description: 'For organizations with advanced needs',
     monthlyPrice: 99,
     yearlyPrice: 990,
-    priceKey: { monthly: 'team_monthly', yearly: 'team_yearly' }, // Same as team for now
-    icon: <Building2 className="h-5 w-5" />,
-    limits: {
-      deadlines: 'Unlimited',
-      users: 'Unlimited',
-      sms: 'Unlimited',
-    },
-    features: [
-      { text: 'Everything in Team', included: true },
-      { text: 'Unlimited team members', included: true, highlight: true },
-      { text: 'Unlimited SMS', included: true, highlight: true },
-      { text: 'API access', included: true, highlight: true },
-      { text: 'SSO (coming soon)', included: true },
-      { text: 'Custom integrations', included: true },
-      { text: 'Dedicated support', included: true },
-      { text: 'SLA guarantee', included: true },
-    ],
+    priceKey: { monthly: 'team_monthly', yearly: 'team_yearly' },
+    color: 'purple',
+    limits: { deadlines: 'Unlimited', users: 'Unlimited', sms: 'Unlimited' },
+    features: ['Everything in Team', 'Unlimited team members', 'Unlimited SMS', 'API access', 'SSO (coming soon)', 'Custom integrations', 'Dedicated support', 'SLA guarantee'],
   },
 ];
 
 export default function Pricing() {
   const [isYearly, setIsYearly] = useState(true);
   const [loadingTier, setLoadingTier] = useState<string | null>(null);
+  const [isDark, setIsDark] = useState(true);
   const { user } = useAuth();
   const { planTier, isActive, createCheckout } = useSubscription();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme");
+    const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    if (savedTheme === "light") setIsDark(false);
+    else if (savedTheme === "dark" || systemPrefersDark) setIsDark(true);
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = !isDark;
+    setIsDark(newTheme);
+    localStorage.setItem("theme", newTheme ? "dark" : "light");
+  };
+
+  const theme = {
+    bg: isDark ? "bg-[#0a0a0f]" : "bg-[#f8fafc]",
+    surface: isDark ? "bg-[#12121a]" : "bg-white",
+    elevated: isDark ? "bg-[#1a1a24]" : "bg-[#f1f5f9]",
+    border: isDark ? "border-[#2a2a3a]" : "border-[#e2e8f0]",
+    text: isDark ? "text-white" : "text-[#0f172a]",
+    textMuted: "text-[#64748b]",
+  };
+
   const handleSelectPlan = async (tier: PricingTier) => {
-    // If not logged in, redirect to auth
     if (!user) {
       navigate('/auth?redirect=/pricing');
       return;
     }
-
-    // If free tier, no action needed
     if (tier.monthlyPrice === 0) {
       navigate('/dashboard');
       return;
     }
-
-    // If already on this plan, go to settings
     if (planTier === tier.name.toLowerCase() && isActive) {
       navigate('/settings?tab=billing');
       return;
     }
 
-    // Start checkout
     setLoadingTier(tier.name);
     try {
       const priceKey = isYearly ? tier.priceKey.yearly : tier.priceKey.monthly;
       const result = await createCheckout.mutateAsync(priceKey);
-      
-      // Redirect to Stripe Checkout
-      if (result.url) {
-        window.location.href = result.url;
-      }
+      if (result.url) window.location.href = result.url;
     } catch (error) {
       console.error('Checkout error:', error);
     } finally {
@@ -183,247 +126,233 @@ export default function Pricing() {
     return 'Switch Plan';
   };
 
-  const isCurrentPlan = (tier: PricingTier) => {
-    return planTier === tier.name.toLowerCase() && isActive;
+  const isCurrentPlan = (tier: PricingTier) => planTier === tier.name.toLowerCase() && isActive;
+
+  const getColorClasses = (color: string, type: 'border' | 'bg' | 'text' | 'glow') => {
+    const colors: Record<string, Record<string, string>> = {
+      blue: { border: 'border-blue-500/30', bg: 'bg-blue-500', text: 'text-blue-500', glow: 'shadow-[0_0_60px_-12px_rgba(59,130,246,0.4)]' },
+      red: { border: 'border-red-500/30', bg: 'bg-red-500', text: 'text-red-500', glow: 'shadow-[0_0_60px_-12px_rgba(239,68,68,0.4)]' },
+      green: { border: 'border-green-500/30', bg: 'bg-green-500', text: 'text-green-500', glow: 'shadow-[0_0_60px_-12px_rgba(34,197,94,0.4)]' },
+      purple: { border: 'border-purple-500/30', bg: 'bg-purple-500', text: 'text-purple-500', glow: 'shadow-[0_0_60px_-12px_rgba(168,85,247,0.4)]' },
+    };
+    return colors[color]?.[type] || '';
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border">
+    <div className={`${theme.bg} ${theme.text} font-sans min-h-screen transition-colors duration-300`}>
+      {/* Noise overlay */}
+      <div className="fixed inset-0 pointer-events-none opacity-[0.015] z-[1000]" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`
+      }} />
+
+      {/* Navigation */}
+      <nav className={`fixed top-0 left-0 right-0 z-50 ${theme.bg}/80 backdrop-blur-xl border-b ${theme.border}`}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
-              <Shield className="h-5 w-5 text-primary-foreground" />
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center justify-center group-hover:bg-red-500/20 transition-colors">
+              <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
             </div>
-            <span className="text-xl font-semibold">DeadlineGuard</span>
-          </a>
+            <span className="font-semibold text-lg">Deadline<span className="text-red-500">Guard</span></span>
+          </Link>
+
+          <div className="hidden md:flex items-center gap-8">
+            <Link to="/" className={`${theme.textMuted} hover:text-white transition-colors text-sm`}>Home</Link>
+            <span className="text-red-500 text-sm font-medium">Pricing</span>
+          </div>
+
           <div className="flex items-center gap-4">
+            <button onClick={toggleTheme} className={`relative w-14 h-7 rounded-full ${theme.elevated} border ${theme.border} cursor-pointer transition-all duration-300`}>
+              <div className={`absolute top-[3px] w-5 h-5 rounded-full transition-all duration-300 shadow-md ${isDark ? "left-[27px] bg-indigo-500" : "left-[3px] bg-amber-500"}`} />
+              <svg className={`absolute left-1.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-amber-500 transition-opacity ${isDark ? "opacity-40" : "opacity-100"}`} fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
+              </svg>
+              <svg className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-indigo-400 transition-opacity ${isDark ? "opacity-100" : "opacity-40"}`} fill="currentColor" viewBox="0 0 20 20">
+                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+              </svg>
+            </button>
+
             {user ? (
-              <Button variant="outline" onClick={() => navigate('/dashboard')}>
+              <Link to="/dashboard" className="bg-red-500 hover:bg-red-500/90 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-all hover:scale-[1.02]">
                 Dashboard
-              </Button>
+              </Link>
             ) : (
-              <>
-                <Button variant="ghost" onClick={() => navigate('/auth')}>
-                  Sign In
-                </Button>
-                <Button onClick={() => navigate('/auth')}>
-                  Get Started
-                </Button>
-              </>
+              <Link to="/auth" className="bg-red-500 hover:bg-red-500/90 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-all hover:scale-[1.02]">
+                Get Started
+              </Link>
             )}
           </div>
         </div>
-      </header>
+      </nav>
 
-      <main className="max-w-7xl mx-auto px-6 py-16">
-        {/* Hero */}
-        <div className="text-center mb-12">
-          <Badge variant="secondary" className="mb-4">
-            Simple, transparent pricing
-          </Badge>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Choose the plan that's right for you
+      {/* Hero */}
+      <section className="pt-32 pb-16 px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <span className="inline-block px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-mono rounded-full mb-6">
+            SIMPLE PRICING
+          </span>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+            <span className={`bg-gradient-to-br ${isDark ? "from-white to-slate-400" : "from-slate-900 to-slate-500"} bg-clip-text text-transparent`}>
+              Protection That Pays
+            </span>
+            <br />
+            <span className="bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
+              For Itself
+            </span>
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Start free, upgrade when you need more. All paid plans include a 14-day free trial.
+          <p className={`text-xl ${theme.textMuted} max-w-2xl mx-auto mb-8`}>
+            One missed deadline can cost thousands. Choose a plan that protects your business.
           </p>
-        </div>
 
-        {/* Billing Toggle */}
-        <div className="flex items-center justify-center gap-4 mb-12">
-          <Label 
-            htmlFor="billing-toggle" 
-            className={cn(
-              "text-sm font-medium cursor-pointer",
-              !isYearly && "text-foreground",
-              isYearly && "text-muted-foreground"
-            )}
-          >
-            Monthly
-          </Label>
-          <Switch
-            id="billing-toggle"
-            checked={isYearly}
-            onCheckedChange={setIsYearly}
-          />
-          <Label 
-            htmlFor="billing-toggle" 
-            className={cn(
-              "text-sm font-medium cursor-pointer",
-              isYearly && "text-foreground",
-              !isYearly && "text-muted-foreground"
-            )}
-          >
-            Yearly
-          </Label>
-          {isYearly && (
-            <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-              Save ~17%
-            </Badge>
-          )}
+          {/* Billing Toggle */}
+          <div className="flex items-center justify-center gap-4 mb-12">
+            <span className={`text-sm ${!isYearly ? theme.text : theme.textMuted}`}>Monthly</span>
+            <button
+              onClick={() => setIsYearly(!isYearly)}
+              className={`relative w-14 h-7 rounded-full ${theme.elevated} border ${theme.border} cursor-pointer transition-all duration-300`}
+            >
+              <div className={`absolute top-[3px] w-5 h-5 rounded-full bg-red-500 transition-all duration-300 shadow-md ${isYearly ? "left-[27px]" : "left-[3px]"}`} />
+            </button>
+            <span className={`text-sm ${isYearly ? theme.text : theme.textMuted}`}>
+              Yearly <span className="text-green-500 text-xs font-mono ml-1">SAVE 17%</span>
+            </span>
+          </div>
         </div>
+      </section>
 
-        {/* Pricing Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+      {/* Pricing Cards */}
+      <section className="px-6 pb-20">
+        <div className="max-w-7xl mx-auto grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {pricingTiers.map((tier) => (
-            <Card 
+            <div
               key={tier.name}
-              className={cn(
-                "relative flex flex-col",
-                tier.popular && "border-primary shadow-lg scale-[1.02]",
-                isCurrentPlan(tier) && "ring-2 ring-primary"
-              )}
+              className={`${theme.surface} border ${tier.popular ? getColorClasses(tier.color, 'border') + ' ' + getColorClasses(tier.color, 'glow') : theme.border} rounded-2xl p-6 relative transition-all duration-300 hover:-translate-y-1 flex flex-col`}
             >
               {tier.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge className="bg-primary">Most Popular</Badge>
+                  <span className={`${getColorClasses(tier.color, 'bg')} text-white text-xs font-mono px-3 py-1 rounded-full`}>
+                    MOST POPULAR
+                  </span>
                 </div>
               )}
-              
-              <CardHeader>
-                <div className="flex items-center gap-2 mb-2">
-                  <div className={cn(
-                    "p-2 rounded-lg",
-                    tier.popular ? "bg-primary/10 text-primary" : "bg-muted"
-                  )}>
-                    {tier.icon}
-                  </div>
-                  <CardTitle className="text-xl">{tier.name}</CardTitle>
-                </div>
-                <CardDescription>{tier.description}</CardDescription>
-              </CardHeader>
 
-              <CardContent className="flex-1">
-                {/* Price */}
-                <div className="mb-6">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-bold">
-                      ${isYearly ? Math.round(tier.yearlyPrice / 12) : tier.monthlyPrice}
-                    </span>
-                    <span className="text-muted-foreground">/month</span>
-                  </div>
-                  {tier.yearlyPrice > 0 && isYearly && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      ${tier.yearlyPrice} billed yearly
-                    </p>
-                  )}
-                  {tier.monthlyPrice === 0 && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Free forever
-                    </p>
-                  )}
-                </div>
+              <div className="mb-6">
+                <h3 className="text-xl font-bold mb-1">{tier.name}</h3>
+                <p className={`text-sm ${theme.textMuted}`}>{tier.description}</p>
+              </div>
 
-                {/* Limits Summary */}
-                <div className="grid grid-cols-3 gap-2 p-3 bg-muted/50 rounded-lg mb-6 text-center text-xs">
-                  <div>
-                    <div className="font-semibold">{tier.limits.deadlines}</div>
-                    <div className="text-muted-foreground">Deadlines</div>
-                  </div>
-                  <div>
-                    <div className="font-semibold">{tier.limits.users}</div>
-                    <div className="text-muted-foreground">Users</div>
-                  </div>
-                  <div>
-                    <div className="font-semibold">{tier.limits.sms}</div>
-                    <div className="text-muted-foreground">SMS</div>
-                  </div>
+              <div className="mb-6">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-bold">
+                    ${isYearly ? Math.round(tier.yearlyPrice / 12) : tier.monthlyPrice}
+                  </span>
+                  <span className={theme.textMuted}>/mo</span>
                 </div>
+                {tier.monthlyPrice > 0 && (
+                  <p className={`text-xs ${theme.textMuted} mt-1`}>
+                    {isYearly ? `$${tier.yearlyPrice}/year billed annually` : `$${tier.monthlyPrice * 12}/year billed monthly`}
+                  </p>
+                )}
+              </div>
 
-                {/* Features */}
-                <ul className="space-y-2">
-                  {tier.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-sm">
-                      {feature.included ? (
-                        <Check className={cn(
-                          "h-4 w-4 mt-0.5 flex-shrink-0",
-                          feature.highlight ? "text-primary" : "text-green-500"
-                        )} />
-                      ) : (
-                        <X className="h-4 w-4 mt-0.5 flex-shrink-0 text-muted-foreground/50" />
-                      )}
-                      <span className={cn(
-                        feature.included ? "text-foreground" : "text-muted-foreground/50",
-                        feature.highlight && "font-medium"
-                      )}>
-                        {feature.text}
-                      </span>
+              {/* Limits */}
+              <div className={`${theme.elevated} rounded-lg p-3 mb-6 space-y-2`}>
+                <div className="flex justify-between text-sm">
+                  <span className={theme.textMuted}>Deadlines</span>
+                  <span className="font-mono">{tier.limits.deadlines}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className={theme.textMuted}>Users</span>
+                  <span className="font-mono">{tier.limits.users}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className={theme.textMuted}>Alerts</span>
+                  <span className="font-mono">{tier.limits.sms}</span>
+                </div>
+              </div>
+
+              {/* Features */}
+              <div className="flex-1 mb-6">
+                <ul className="space-y-3">
+                  {tier.features.map((feature, i) => (
+                    <li key={i} className="flex items-start gap-3 text-sm">
+                      <svg className={`w-5 h-5 flex-shrink-0 ${getColorClasses(tier.color, 'text')}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className={theme.textMuted}>{feature}</span>
                     </li>
                   ))}
                 </ul>
-              </CardContent>
+              </div>
 
-              <CardFooter>
-                <Button
-                  className="w-full"
-                  variant={tier.popular ? "default" : "outline"}
-                  disabled={isCurrentPlan(tier) || loadingTier === tier.name}
-                  onClick={() => handleSelectPlan(tier)}
-                >
-                  {loadingTier === tier.name ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      {getButtonText(tier)}
-                      {!isCurrentPlan(tier) && tier.monthlyPrice > 0 && (
-                        <ArrowRight className="h-4 w-4 ml-2" />
-                      )}
-                    </>
-                  )}
-                </Button>
-              </CardFooter>
-            </Card>
+              {/* CTA Button */}
+              <button
+                onClick={() => handleSelectPlan(tier)}
+                disabled={isCurrentPlan(tier) || loadingTier === tier.name}
+                className={`w-full py-3 rounded-lg font-medium text-sm transition-all ${
+                  isCurrentPlan(tier)
+                    ? `${theme.elevated} ${theme.textMuted} cursor-not-allowed`
+                    : tier.popular
+                    ? `${getColorClasses(tier.color, 'bg')} text-white hover:opacity-90 hover:scale-[1.02] hover:shadow-lg`
+                    : `${theme.elevated} border ${theme.border} hover:border-red-500/50`
+                }`}
+              >
+                {loadingTier === tier.name ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Processing...
+                  </span>
+                ) : (
+                  getButtonText(tier)
+                )}
+              </button>
+            </div>
           ))}
         </div>
+      </section>
 
-        {/* FAQ / Trust Section */}
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-2xl font-bold mb-4">Frequently Asked Questions</h2>
+      {/* FAQ */}
+      <section className={`${theme.surface} border-t ${theme.border} py-20 px-6`}>
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl font-bold text-center mb-12">Frequently Asked Questions</h2>
           
-          <div className="grid md:grid-cols-2 gap-6 text-left mt-8">
-            <div>
-              <h3 className="font-semibold mb-2">Can I cancel anytime?</h3>
-              <p className="text-sm text-muted-foreground">
-                Yes, you can cancel your subscription at any time. You'll continue to have access until the end of your billing period.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2">What happens after my trial?</h3>
-              <p className="text-sm text-muted-foreground">
-                After your 14-day trial, you'll be charged for the plan you selected. You can downgrade to Free anytime before that.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2">Do you offer refunds?</h3>
-              <p className="text-sm text-muted-foreground">
-                We offer a 30-day money-back guarantee. If you're not satisfied, contact us for a full refund.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2">Can I switch plans?</h3>
-              <p className="text-sm text-muted-foreground">
-                Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately.
-              </p>
-            </div>
+          <div className="grid md:grid-cols-2 gap-8">
+            {[
+              { q: 'Can I cancel anytime?', a: "Yes, you can cancel your subscription at any time. You'll continue to have access until the end of your billing period." },
+              { q: 'What happens after my trial?', a: "After your 14-day trial, you'll be charged for the plan you selected. You can downgrade to Free anytime before that." },
+              { q: 'Do you offer refunds?', a: "We offer a 30-day money-back guarantee. If you're not satisfied, contact us for a full refund." },
+              { q: 'Can I switch plans?', a: "Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately." },
+            ].map((faq, i) => (
+              <div key={i}>
+                <h3 className="font-semibold mb-2">{faq.q}</h3>
+                <p className={`text-sm ${theme.textMuted}`}>{faq.a}</p>
+              </div>
+            ))}
           </div>
         </div>
+      </section>
 
-        {/* CTA */}
-        <div className="mt-16 text-center p-8 bg-muted/50 rounded-2xl">
+      {/* CTA */}
+      <section className="py-20 px-6">
+        <div className={`max-w-3xl mx-auto text-center ${theme.surface} border ${theme.border} rounded-2xl p-10`}>
           <h2 className="text-2xl font-bold mb-2">Still have questions?</h2>
-          <p className="text-muted-foreground mb-4">
+          <p className={`${theme.textMuted} mb-6`}>
             We're here to help. Reach out and we'll get back to you within 24 hours.
           </p>
-          <Button variant="outline">Contact Sales</Button>
+          <button className={`${theme.elevated} border ${theme.border} px-6 py-3 rounded-lg font-medium text-sm hover:border-red-500/50 transition-all`}>
+            Contact Sales
+          </button>
         </div>
-      </main>
+      </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-8">
-        <div className="max-w-7xl mx-auto px-6 text-center text-sm text-muted-foreground">
-          <p>© 2026 DeadlineGuard. All rights reserved.</p>
+      <footer className={`border-t ${theme.border} py-8 px-6`}>
+        <div className="max-w-7xl mx-auto text-center">
+          <p className={`text-sm ${theme.textMuted}`}>© 2026 DeadlineGuard. All rights reserved.</p>
         </div>
       </footer>
     </div>
